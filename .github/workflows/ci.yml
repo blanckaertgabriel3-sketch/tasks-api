@@ -1,0 +1,19 @@
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: récupérer le code
+      - uses: actions/checkout@v6
+
+      - name: installer Python 3.12
+      - uses: actions/setup-python@v7
+        with: 
+          python-version: "3.12"
+
+      - name: installer les dépendances
+        run: pip install -r requirements-dev.txt
+      
+      - name: lancer les tests
+        run: pytest
