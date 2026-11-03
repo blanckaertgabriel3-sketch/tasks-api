@@ -22,6 +22,9 @@ jobs:
       - name: vérifier avec black
         run: black --check .
 
+      - name: lancer les tests
+        run: pytest --cov --cov-report=xml
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -46,3 +49,10 @@ jobs:
       
       - name: seuil de couverture
         run: pytest --cov=app --cov-fail-under=80 
+      
+      - name: publier le rapport de couverture
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v7
+        with:
+          name: rapport-couverture
+          path: coverage.xml      
