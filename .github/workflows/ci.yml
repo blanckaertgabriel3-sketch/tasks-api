@@ -37,3 +37,6 @@ jobs:
       
       - name: lancer les tests
         run: pytest
+      
+      - name: seuil de couverture
+        run: pytest --cov=app --cov-fail-under=80 
