@@ -1,6 +1,26 @@
 name: CI
 on: push
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: récupérer le code
+        uses: actions/checkout@v6
+
+      - name: installer Python 3.12
+        uses: actions/setup-python@v7
+        with: 
+          python-version: "3.12"
+
+      - name: installer les dépendances
+        run: pip install -r requirements-dev.txt
+
+      - name: vérifier avec flake8
+        run: flake8 .
+
+      - name: vérifier avec black
+        run: black --check .
+
   test:
     runs-on: ubuntu-latest
     steps:
