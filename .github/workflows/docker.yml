@@ -1,5 +1,11 @@
 name: Docker
-on: push
+on: 
+  push:
+    branches:
+      - main 
+    tags:
+      - "v*"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -25,5 +31,25 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6   # tags et labels
-      - uses: docker/build-push-action@v7 # construit et pousse
+
+          
+      # Générer automatiquement les tags et labels
+      - name: Générer les métadonnées
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+
+      # Construire et publier l'image
+      - name: Construire et publier
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
