@@ -1,29 +1,85 @@
+
 name: Docker
-on: push
+
+# Déclenchement du workflow
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
 
 jobs:
+
+  # JOB 1 : Vérifier que les tests passent
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
       - run: pip install -r requirements-dev.txt
       - run: pytest
+
+
+  # JOB 2 : Construire et publier l'image Docker
   build:
     needs: test
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v6
+
+      # Préparer Docker Buildx
       - uses: docker/setup-buildx-action@v4
+
+      # Se connecter à GitHub Container Registry
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6   # tags et labels
-      - uses: docker/build-push-action@v7 # construit et pousse
+
+      # Mettre le nom du propriétaire en minuscules
+      - name: Définir le nom de l'image
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/tasks-api" >> $GITHUB_ENV
+
+      # Définir la version de l'application
+      - name: Définir la version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          else
+            echo "APP_VERSION=dev" >> $GITHUB_ENV
+          fi
+
+      # Générer automatiquement les tags et labels
+      - name: Générer les métadonnées
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+
+      # Construire et publier l'image
+      - name: Construire et publier
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
